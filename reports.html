@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Reports — AttendAI{% endblock %}
+{% block page_title %}Attendance Report{% endblock %}
+{% block page_sub %}{{ records|length }} records{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('export_csv', date=filter_date, student=filter_student) }}" class="btn btn-ghost btn-sm">↓ Export CSV</a>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:20px;">
+  <form method="GET" class="flex gap-3 items-center" style="flex-wrap:wrap;">
+    <div style="flex:1;min-width:160px;">
+      <label class="form-label">Filter by Date</label>
+      <input type="date" name="date" value="{{ filter_date }}"/>
+    </div>
+    <div style="flex:1;min-width:160px;">
+      <label class="form-label">Filter by Student</label>
+      <input type="text" name="student" value="{{ filter_student }}" placeholder="Name or Roll No"/>
+    </div>
+    <div style="align-self:flex-end;display:flex;gap:8px;">
+      <button class="btn btn-gold" type="submit">Apply</button>
+      <a href="{{ url_for('reports') }}" class="btn btn-ghost">Clear</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  {% if records %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Roll No</th><th>Dept</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td style="font-weight:500;color:var(--text);">{{ r.name }}</td>
+          <td><span class="roll">{{ r.roll_no }}</span></td>
+          <td style="color:var(--muted2);font-size:0.82rem;">{{ r.dept or '—' }}</td>
+          <td style="font-size:0.82rem;color:var(--muted2);">{{ r.date }}</td>
+          <td style="font-size:0.82rem;color:var(--muted2);">{{ r.time }}</td>
+          <td><span class="badge badge-present">{{ r.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem;opacity:0.2;margin-bottom:12px;">≡</div>
+    <div style="color:var(--muted2);">No records found</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:6px;">Try adjusting your filters</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

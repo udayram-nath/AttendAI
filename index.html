@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — AttendAI{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}{{ stats.date }} · Live overview{% endblock %}
+
+{% block topbar_actions %}
+  {% if camera_active %}
+    <form method="POST" action="{{ url_for('stop_camera') }}">
+      <button class="btn btn-stop">⬛ Stop Camera</button>
+    </form>
+  {% else %}
+    <form method="POST" action="{{ url_for('start_camera') }}">
+      <button class="btn btn-gold">▶ Start Attendance</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-label">Total Students</div>
+    <div class="stat-value blue" id="s-total">{{ stats.total }}</div>
+  </div>
+  <div class="stat-card teal">
+    <div class="stat-label">Present Today</div>
+    <div class="stat-value teal" id="s-present">{{ stats.present }}</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-label">Absent</div>
+    <div class="stat-value red" id="s-absent">{{ stats.absent }}</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-label">Attendance %</div>
+    <div class="stat-value gold" id="s-pct">
+      {% if stats.total > 0 %}{{ ((stats.present/stats.total)*100)|int }}%{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if unknown_face_count > 0 %}
+<div style="background:rgba(255,87,87,0.07);border:1px solid rgba(255,87,87,0.2);
+            border-radius:10px;padding:14px 18px;margin-bottom:20px;
+            display:flex;align-items:center;gap:14px;">
+  <div style="font-size:1.5rem;">⚠️</div>
+  <div>
+    <div style="font-weight:600;color:var(--red);font-size:0.9rem;">{{ unknown_face_count }} Unknown Face(s) Detected</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">Unregistered people were detected by the camera.</div>
+  </div>
+  <a href="{{ url_for('unknown_faces') }}" class="btn btn-danger btn-sm" style="margin-left:auto;">View →</a>
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:20px;">
+  <div class="flex justify-between items-center" style="margin-bottom:16px;">
+    <div class="card-title" style="margin:0;">Today's Attendance</div>
+    <a href="{{ url_for('reports') }}" class="btn btn-ghost btn-sm">Full Report →</a>
+  </div>
+  {% if today_records %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Roll No</th><th>Dept</th><th>Time</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in today_records %}
+        <tr>
+          <td style="font-weight:500;color:var(--text);">{{ r.name }}</td>
+          <td><span class="roll">{{ r.roll_no }}</span></td>
+          <td style="color:var(--muted2);font-size:0.82rem;">{{ r.dept or '—' }}</td>
+          <td style="font-size:0.82rem;color:var(--muted2);">{{ r.time }}</td>
+          <td><span class="badge badge-present">{{ r.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:2.5rem;opacity:0.2;margin-bottom:12px;">◌</div>
+    <div style="color:var(--muted2);">No attendance recorded today</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:6px;">Start the camera to begin tracking</div>
+  </div>
+  {% endif %}
+</div>
+
+{% if students %}
+<div class="card">
+  <div class="card-title">Manual Mark Attendance</div>
+  <form method="POST" action="{{ url_for('manual_mark') }}" class="flex gap-3 items-center">
+    <select name="student_id" style="max-width:300px;">
+      {% for s in students %}
+      <option value="{{ s.id }}">{{ s.name }} ({{ s.roll_no }})</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-ghost">Mark Present</button>
+  </form>
+</div>
+{% endif %}
+
+<script>
+async function refreshStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+    document.getElementById('s-total').textContent   = s.total;
+    document.getElementById('s-present').textContent = s.present;
+    document.getElementById('s-absent').textContent  = s.absent;
+    document.getElementById('s-pct').textContent     = s.total > 0 ? Math.round((s.present/s.total)*100)+'%' : '—';
+  } catch(e){}
+}
+setInterval(refreshStats, 8000);
+</script>
+{% endblock %}

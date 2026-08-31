@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Register Unknown Face — AttendAI{% endblock %}
+{% block page_title %}Register Unknown Face{% endblock %}
+{% block page_sub %}Convert unknown face to registered student{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('unknown_faces') }}" class="btn btn-ghost btn-sm">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;margin:0 auto;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+
+    <!-- Captured face preview -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <img src="{{ url_for('unknown_face_image', filename=filename) }}"
+           style="width:100%;aspect-ratio:1;object-fit:cover;"
+           onerror="this.style.display='none'"/>
+      <div style="padding:14px;">
+        <div class="badge badge-missing" style="margin-bottom:8px;">Unregistered Face</div>
+        <div style="font-size:0.78rem;color:var(--muted);">
+          This face was detected by the camera but is not in the system.
+          Fill in their details to register them.
+        </div>
+      </div>
+    </div>
+
+    <!-- Registration form -->
+    <div class="card card-gold">
+      <div class="card-title">Student Details</div>
+      <form method="POST">
+        <input type="hidden" name="filename" value="{{ filename }}"/>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="name" placeholder="e.g. Priya Sharma" required autofocus/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Roll Number</label>
+          <input type="text" name="roll_no" placeholder="e.g. CS2024042" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Department</label>
+          <input type="text" name="dept" placeholder="e.g. Computer Science"/>
+        </div>
+        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;">
+          ✓ Register Student
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

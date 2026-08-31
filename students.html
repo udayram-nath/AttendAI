@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Students — AttendAI{% endblock %}
+{% block page_title %}Students{% endblock %}
+{% block page_sub %}{{ students|length }} registered{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('add_student_route') }}" class="btn btn-gold">＋ Add Student</a>
+{% endblock %}
+
+{% block content %}
+{% if students %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Roll No</th>
+          <th>Department</th>
+          <th>Face</th>
+          <th>Registered</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td style="color:var(--muted);font-size:0.78rem;">{{ loop.index }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:34px;height:34px;border-radius:50%;
+                          background:linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.05));
+                          border:1px solid rgba(201,168,76,0.2);
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:0.9rem;flex-shrink:0;">
+                {{ s.name[0].upper() }}
+              </div>
+              <div style="font-weight:500;color:var(--text);">{{ s.name }}</div>
+            </div>
+          </td>
+          <td><span class="roll">{{ s.roll_no }}</span></td>
+          <td style="color:var(--muted2);font-size:0.82rem;">{{ s.dept or '—' }}</td>
+          <td>
+            {% if s.has_face %}
+              <span class="badge badge-encoded">✓ Ready</span>
+            {% else %}
+              <span class="badge badge-missing">✗ Missing</span>
+            {% endif %}
+          </td>
+          <td style="font-size:0.78rem;color:var(--muted);">{{ s.created_at[:10] if s.created_at else '—' }}</td>
+          <td>
+            <div class="flex gap-2">
+              <a href="{{ url_for('capture_face', student_id=s.id) }}" class="btn btn-ghost btn-sm">
+                📷 {% if s.has_face %}Recapture{% else %}Capture{% endif %}
+              </a>
+              <form method="POST" action="{{ url_for('delete_student_route', student_id=s.id) }}"
+                    onsubmit="return confirm('Delete {{ s.name }}? This removes all their data.')">
+                <button class="btn btn-danger btn-sm">✕</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px 20px;">
+  <div style="font-size:3rem;opacity:0.2;margin-bottom:16px;">◈</div>
+  <div style="color:var(--muted2);font-size:1rem;margin-bottom:20px;">No students registered yet</div>
+  <a href="{{ url_for('add_student_route') }}" class="btn btn-gold">＋ Add First Student</a>
+</div>
+{% endif %}
+{% endblock %}

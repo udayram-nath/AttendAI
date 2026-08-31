@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Unknown Faces — AttendAI{% endblock %}
+{% block page_title %}Unknown Faces{% endblock %}
+{% block page_sub %}Faces detected but not registered — {{ faces|length }} captured{% endblock %}
+
+{% block topbar_actions %}
+  <form method="POST" action="{{ url_for('clear_unknown_faces') }}" onsubmit="return confirm('Clear all unknown faces?')">
+    <button class="btn btn-danger btn-sm">🗑 Clear All</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+{% if faces %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
+  {% for face in faces %}
+  <div class="card" style="padding:0;overflow:hidden;transition:border-color 0.2s;"
+       onmouseover="this.style.borderColor='rgba(201,168,76,0.3)'"
+       onmouseout="this.style.borderColor='var(--border)'">
+
+    <!-- Face image -->
+    <div style="position:relative;aspect-ratio:1;background:#050709;overflow:hidden;">
+      <img src="{{ url_for('unknown_face_image', filename=face.filename) }}"
+           style="width:100%;height:100%;object-fit:cover;"
+           onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:2rem;\'>👤</div>'"/>
+      <div style="position:absolute;top:8px;left:8px;background:rgba(255,87,87,0.85);
+                  color:#fff;font-size:0.62rem;padding:2px 8px;border-radius:4px;
+                  font-weight:700;letter-spacing:1px;">UNKNOWN</div>
+      <div style="position:absolute;bottom:8px;right:8px;background:rgba(8,10,15,0.8);
+                  color:var(--muted);font-size:0.65rem;padding:2px 7px;border-radius:4px;">
+        {{ face.time }}
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="padding:12px;">
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;">
+        Detected {{ face.date }}
+      </div>
+      <div style="display:flex;gap-6px;flex-direction:column;gap:6px;">
+        <a href="{{ url_for('register_unknown', filename=face.filename) }}"
+           class="btn btn-gold btn-sm" style="justify-content:center;font-size:0.75rem;">
+          ＋ Register This Person
+        </a>
+        <form method="POST" action="{{ url_for('delete_unknown_face', filename=face.filename) }}">
+          <button class="btn btn-danger btn-sm" style="width:100%;justify-content:center;font-size:0.75rem;">
+            ✕ Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px 20px;">
+  <div style="font-size:3rem;opacity:0.2;margin-bottom:16px;">👁</div>
+  <div style="color:var(--muted2);font-size:1rem;margin-bottom:8px;">No unknown faces captured yet</div>
+  <div style="color:var(--muted);font-size:0.82rem;">
+    When the camera detects an unregistered face,<br>it will appear here automatically.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

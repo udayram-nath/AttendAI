@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Add Student — AttendAI{% endblock %}
+{% block page_title %}Add Student{% endblock %}
+{% block page_sub %}Capture face & register{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('students') }}" class="btn btn-ghost btn-sm">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+
+    <!-- Left: Form -->
+    <div class="card card-gold">
+      <div class="card-title">Student Details</div>
+      <form method="POST" id="student-form">
+        <input type="hidden" name="photo_data" id="photo_data"/>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="name" placeholder="e.g. Arjun Sharma" required autofocus/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Roll Number</label>
+          <input type="text" name="roll_no" placeholder="e.g. CS2024001" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Department</label>
+          <input type="text" name="dept" placeholder="e.g. Computer Science"/>
+        </div>
+        <div id="capture-status" style="display:none;padding:10px 14px;border-radius:8px;
+             background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);
+             color:var(--teal);font-size:0.83rem;margin-bottom:16px;">
+          ✓ Face captured successfully
+        </div>
+        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;" id="save-btn" disabled>
+          Save Student
+        </button>
+        <div style="font-size:0.75rem;color:var(--muted);text-align:center;margin-top:8px;">
+          Capture face first, then save
+        </div>
+      </form>
+    </div>
+
+    <!-- Right: Camera capture -->
+    <div class="card">
+      <div class="card-title">Face Capture</div>
+
+      <!-- Camera preview -->
+      <div style="position:relative;background:#050709;border-radius:10px;overflow:hidden;
+                  aspect-ratio:4/3;margin-bottom:14px;">
+        <video id="camera-preview" autoplay playsinline muted
+               style="width:100%;height:100%;object-fit:cover;display:none;"></video>
+        <canvas id="capture-canvas" style="display:none;"></canvas>
+        <img id="captured-img" style="width:100%;height:100%;object-fit:cover;display:none;border-radius:10px;"/>
+
+        <!-- Overlay when camera off -->
+        <div id="cam-placeholder" style="position:absolute;inset:0;display:flex;
+             flex-direction:column;align-items:center;justify-content:center;
+             color:var(--muted);gap:10px;">
+          <div style="font-size:3rem;opacity:0.3;">◉</div>
+          <div style="font-size:0.82rem;">Camera not started</div>
+        </div>
+
+        <!-- Face guide overlay -->
+        <div id="face-guide" style="display:none;position:absolute;inset:0;
+             pointer-events:none;">
+          <svg width="100%" height="100%" viewBox="0 0 300 225">
+            <ellipse cx="150" cy="112" rx="70" ry="85"
+                     fill="none" stroke="rgba(201,168,76,0.6)" stroke-width="2"
+                     stroke-dasharray="8 4"/>
+            <text x="150" y="215" text-anchor="middle"
+                  fill="rgba(201,168,76,0.8)" font-size="11" font-family="Outfit">
+              Align face in oval
+            </text>
+          </svg>
+        </div>
+
+        <!-- LIVE badge -->
+        <div id="live-badge" style="display:none;position:absolute;top:10px;left:10px;
+             background:rgba(255,87,87,0.9);color:#fff;font-size:0.65rem;
+             padding:3px 9px;border-radius:4px;font-weight:700;letter-spacing:1px;
+             animation:livepulse 1.5s infinite;">● LIVE</div>
+      </div>
+
+      <!-- Buttons -->
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-teal" id="start-cam-btn" onclick="startCamera()" style="justify-content:center;">
+          📷 Start Camera
+        </button>
+        <button class="btn btn-gold" id="capture-btn" onclick="capturePhoto()"
+                style="display:none;justify-content:center;">
+          ⚡ Capture Face
+        </button>
+        <button class="btn btn-ghost btn-sm" id="retake-btn" onclick="retakePhoto()"
+                style="display:none;justify-content:center;">
+          ↺ Retake
+        </button>
+      </div>
+
+      <div class="divider"></div>
+      <div style="font-size:0.75rem;color:var(--muted);line-height:1.8;">
+        <div style="color:var(--muted2);font-weight:600;margin-bottom:4px;">Tips for best results</div>
+        <div>• Face the camera directly</div>
+        <div>• Good lighting — no backlight</div>
+        <div>• Remove sunglasses or masks</div>
+        <div>• Keep face inside the oval</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let stream = null;
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' }
+    });
+    const video = document.getElementById('camera-preview');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('cam-placeholder').style.display = 'none';
+    document.getElementById('face-guide').style.display = 'block';
+    document.getElementById('live-badge').style.display = 'block';
+    document.getElementById('start-cam-btn').style.display = 'none';
+    document.getElementById('capture-btn').style.display = 'flex';
+    document.getElementById('captured-img').style.display = 'none';
+  } catch(e) {
+    alert('Camera error: ' + e.message + '\nMake sure to allow camera access.');
+  }
+}
+
+function capturePhoto() {
+  const video  = document.getElementById('camera-preview');
+  const canvas = document.getElementById('capture-canvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  const dataURL = canvas.toDataURL('image/jpeg', 0.92);
+  document.getElementById('photo_data').value = dataURL;
+
+  // Show captured image
+  const img = document.getElementById('captured-img');
+  img.src = dataURL;
+  img.style.display = 'block';
+  video.style.display = 'none';
+  document.getElementById('face-guide').style.display = 'none';
+  document.getElementById('live-badge').style.display = 'none';
+  document.getElementById('capture-btn').style.display = 'none';
+  document.getElementById('retake-btn').style.display = 'flex';
+  document.getElementById('capture-status').style.display = 'block';
+  document.getElementById('save-btn').disabled = false;
+
+  // Stop camera
+  if (stream) stream.getTracks().forEach(t => t.stop());
+}
+
+function retakePhoto() {
+  document.getElementById('captured-img').style.display = 'none';
+  document.getElementById('cam-placeholder').style.display = 'flex';
+  document.getElementById('retake-btn').style.display = 'none';
+  document.getElementById('capture-btn').style.display = 'none';
+  document.getElementById('start-cam-btn').style.display = 'flex';
+  document.getElementById('capture-status').style.display = 'none';
+  document.getElementById('save-btn').disabled = true;
+  document.getElementById('photo_data').value = '';
+}
+</script>
+{% endblock %}

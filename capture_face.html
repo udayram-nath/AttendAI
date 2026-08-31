@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Capture Face — AttendAI{% endblock %}
+{% block page_title %}Capture Face{% endblock %}
+{% block page_sub %}{{ student.name if student else '' }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('students') }}" class="btn btn-ghost btn-sm">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+  {% if student %}
+  <div class="card card-gold" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="width:48px;height:48px;border-radius:50%;
+                  background:linear-gradient(135deg,rgba(201,168,76,0.25),rgba(201,168,76,0.05));
+                  border:1px solid rgba(201,168,76,0.3);
+                  display:flex;align-items:center;justify-content:center;
+                  font-size:1.4rem;font-weight:700;color:var(--gold2);">
+        {{ student.name[0].upper() }}
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:1rem;color:var(--text);">{{ student.name }}</div>
+        <div class="roll">{{ student.roll_no }}</div>
+      </div>
+      {% if student.has_face %}
+      <span class="badge badge-encoded" style="margin-left:auto;">✓ Face exists</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-title">Live Face Capture</div>
+
+    <div style="position:relative;background:#050709;border-radius:10px;overflow:hidden;
+                aspect-ratio:4/3;margin-bottom:14px;">
+      <video id="camera-preview" autoplay playsinline muted
+             style="width:100%;height:100%;object-fit:cover;display:none;"></video>
+      <canvas id="capture-canvas" style="display:none;"></canvas>
+      <img id="captured-img" style="width:100%;height:100%;object-fit:cover;display:none;border-radius:10px;"/>
+
+      <div id="cam-placeholder" style="position:absolute;inset:0;display:flex;
+           flex-direction:column;align-items:center;justify-content:center;
+           color:var(--muted);gap:10px;">
+        <div style="font-size:3rem;opacity:0.3;">◉</div>
+        <div style="font-size:0.82rem;">Click Start Camera</div>
+      </div>
+
+      <div id="face-guide" style="display:none;position:absolute;inset:0;pointer-events:none;">
+        <svg width="100%" height="100%" viewBox="0 0 300 225">
+          <ellipse cx="150" cy="112" rx="70" ry="85"
+                   fill="none" stroke="rgba(201,168,76,0.6)" stroke-width="2"
+                   stroke-dasharray="8 4"/>
+          <text x="150" y="215" text-anchor="middle"
+                fill="rgba(201,168,76,0.8)" font-size="11" font-family="Outfit">
+            Align face inside oval
+          </text>
+        </svg>
+      </div>
+
+      <div id="live-badge" style="display:none;position:absolute;top:10px;left:10px;
+           background:rgba(255,87,87,0.9);color:#fff;font-size:0.65rem;
+           padding:3px 9px;border-radius:4px;font-weight:700;letter-spacing:1px;
+           animation:livepulse 1.5s infinite;">● LIVE</div>
+
+      <div id="success-overlay" style="display:none;position:absolute;inset:0;
+           background:rgba(0,212,170,0.15);border:2px solid var(--teal);border-radius:10px;
+           display:none;align-items:center;justify-content:center;">
+        <div style="font-size:3rem;">✓</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-teal" id="start-cam-btn" onclick="startCamera()"
+              style="justify-content:center;">📷 Start Camera</button>
+      <button class="btn btn-gold" id="capture-btn" onclick="captureAndSave()"
+              style="display:none;justify-content:center;">⚡ Capture & Save</button>
+      <button class="btn btn-ghost btn-sm" id="retake-btn" onclick="retake()"
+              style="display:none;justify-content:center;">↺ Retake Photo</button>
+    </div>
+
+    <div id="result-msg" style="display:none;margin-top:14px;padding:12px 16px;
+         border-radius:8px;font-size:0.85rem;text-align:center;"></div>
+  </div>
+</div>
+
+<script>
+let stream = null;
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' }
+    });
+    const video = document.getElementById('camera-preview');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('cam-placeholder').style.display = 'none';
+    document.getElementById('face-guide').style.display = 'block';
+    document.getElementById('live-badge').style.display = 'block';
+    document.getElementById('start-cam-btn').style.display = 'none';
+    document.getElementById('capture-btn').style.display = 'flex';
+  } catch(e) {
+    alert('Camera error: ' + e.message);
+  }
+}
+
+async function captureAndSave() {
+  const video  = document.getElementById('camera-preview');
+  const canvas = document.getElementById('capture-canvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataURL = canvas.toDataURL('image/jpeg', 0.92);
+
+  // Show captured image
+  const img = document.getElementById('captured-img');
+  img.src = dataURL;
+  img.style.display = 'block';
+  video.style.display = 'none';
+  document.getElementById('face-guide').style.display = 'none';
+  document.getElementById('live-badge').style.display = 'none';
+  document.getElementById('capture-btn').style.display = 'none';
+  document.getElementById('retake-btn').style.display = 'flex';
+  if (stream) stream.getTracks().forEach(t => t.stop());
+
+  // Send to server
+  const btn = document.getElementById('retake-btn');
+  btn.disabled = true;
+  const msg = document.getElementById('result-msg');
+  msg.style.display = 'block';
+  msg.style.background = 'rgba(74,158,255,0.08)';
+  msg.style.border = '1px solid rgba(74,158,255,0.2)';
+  msg.style.color = 'var(--blue)';
+  msg.textContent = '⏳ Analysing face...';
+
+  try {
+    const res  = await fetch('/students/{{ student.id }}/capture_face', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ photo_data: dataURL })
+    });
+    const data = await res.json();
+    if (data.success) {
+      msg.style.background = 'rgba(0,212,170,0.08)';
+      msg.style.border     = '1px solid rgba(0,212,170,0.2)';
+      msg.style.color      = 'var(--teal)';
+      msg.textContent      = '✓ Face captured & encoded successfully!';
+      setTimeout(() => window.location.href = '/students', 1500);
+    } else {
+      msg.style.background = 'rgba(255,87,87,0.08)';
+      msg.style.border     = '1px solid rgba(255,87,87,0.2)';
+      msg.style.color      = 'var(--red)';
+      msg.textContent      = '✗ ' + (data.error || 'No face detected. Try again.');
+      btn.disabled = false;
+    }
+  } catch(e) {
+    msg.textContent = '✗ Error: ' + e.message;
+    btn.disabled = false;
+  }
+}
+
+function retake() {
+  document.getElementById('captured-img').style.display = 'none';
+  document.getElementById('cam-placeholder').style.display = 'flex';
+  document.getElementById('retake-btn').style.display = 'none';
+  document.getElementById('start-cam-btn').style.display = 'flex';
+  document.getElementById('result-msg').style.display = 'none';
+}
+</script>
+{% endblock %}
